@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import { getLeaderboard } from "@/lib/api";
 
 type User = {
   name: string;
@@ -14,113 +14,60 @@ type User = {
   lastLoginDate?: string | null;
 };
 
-// Leaderboard will be generated dynamically with user's position
-
-const characterImages: Record<string, string> = {
-  explorer: "/characters/explorer.png",
-  strategist: "/characters/strategist.png",
-  dreamer: "/characters/dreamer.png",
-  realist: "/characters/realist.png",
+type LeaderboardEntry = {
+  name: string;
+  xp: number;
+  leaderboard_position: number;
 };
 
 export default function LeaderboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("finstinct-user");
-    if (!storedUser) {
-      router.replace("/");
-    } else {
-      setUser(JSON.parse(storedUser));
+    const fetchData = async () => {
+      const storedUser = localStorage.getItem("finstinct-user");
+      if (!storedUser) {
+        router.replace("/");
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+
+      // Fetch leaderboard from backend
+      try {
+        const leaderboardData = await getLeaderboard();
+        setLeaderboard(leaderboardData);
+      } catch (err) {
+        console.warn("Failed to fetch leaderboard, using mock data:", err);
+        // Use mock leaderboard data as fallback
+        const mockLeaderboard = [
+          { name: "Bhavesh", xp: 280, leaderboard_position: 1 },
+          { name: "Lasya", xp: 250, leaderboard_position: 2 },
+          { name: userData.name, xp: userData.xp || 0, leaderboard_position: 3 },
+        ];
+        // Sort by XP (descending) and update positions
+        mockLeaderboard.sort((a, b) => b.xp - a.xp);
+        mockLeaderboard.forEach((entry, index) => {
+          entry.leaderboard_position = index + 1;
+        });
+        setLeaderboard(mockLeaderboard);
+      }
+
       setChecking(false);
-    }
+    };
+
+    fetchData();
   }, [router]);
 
   if (checking || !user) return null;
 
-  // Generate leaderboard with specific names
-  const generateLeaderboard = () => {
-    const leaderboard = [
-      { name: "Bhavesh", xp: 280, leaderboard_position: 1 },
-      { name: "Lasya", xp: 250, leaderboard_position: 2 },
-      { name: user.name, xp: user.xp || 0, leaderboard_position: 3 },
-    ];
-    
-    // Sort by XP (descending) and update positions
-    leaderboard.sort((a, b) => b.xp - a.xp);
-    leaderboard.forEach((entry, index) => {
-      entry.leaderboard_position = index + 1;
-    });
-    
-    return leaderboard;
-  };
-
-  const leaderboard = generateLeaderboard();
-
   return (
     <div className="min-h-screen pt-20">
-      {/* 🔝 TOP BAR */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
-          {/* Player Info */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800">
-              <Image
-                src={characterImages[user.character]}
-                alt={user.character}
-                width={40}
-                height={40}
-                className="object-contain"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-bold">{user.name}</p>
-              <p className="text-xs text-gray-400 capitalize">
-                {user.character}
-              </p>
-            </div>
-          </div>
-
-          {/* Center Tabs */}
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link
-              href="/dashboard"
-              className="px-3 py-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 border border-transparent"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="px-3 py-1.5 rounded-full bg-white/10 text-white border border-white/20 shadow-sm"
-            >
-              Leaderboard
-            </Link>
-          </nav>
-
-          {/* XP and Streak */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-yellow-400/90 text-black px-4 py-1.5 rounded-full font-bold shadow">
-              ⭐ {user.xp} XP
-            </div>
-            <div className="flex items-center gap-2 bg-orange-500/90 text-white px-4 py-1.5 rounded-full font-bold shadow">
-              🔥 {user.streak || 0} Day Streak
-            </div>
-          </div>
-
-          {/* Logout */}
-          <button
-            onClick={() => {
-              localStorage.removeItem("finstinct-user");
-              router.replace("/");
-            }}
-            className="text-sm text-red-400 hover:text-red-300"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Navbar />
 
       {/* 🏆 Leaderboard Content */}
       <main className="max-w-3xl mx-auto px-6 mt-10">

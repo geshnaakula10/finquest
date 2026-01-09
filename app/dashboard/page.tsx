@@ -1,13 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-
-import MapNode from "@/components/MapNode";
-import BossNode from "@/components/BossNode";
-import PathLine from "@/components/PathLine";
+import Navbar from "@/components/Navbar";
+import PlayerInfo from "@/components/dashboard/PlayerInfo";
+import ProgressBar, { calculateLevelFromXP } from "@/components/dashboard/ProgressBar";
+import FinanceNews from "@/components/dashboard/FinanceNews";
+import MiniLeaderboard from "@/components/dashboard/MiniLeaderboard";
+import { getProfile, getLeaderboard, type UserProfile } from "@/lib/api";
 import { updateStreak } from "@/lib/streak";
 
 type User = {
@@ -17,6 +17,8 @@ type User = {
   xp: number;
   streak?: number;
   lastLoginDate?: string | null;
+  id?: string;
+  accessToken?: string;
 };
 
 const characterImages: Record<string, string> = {
@@ -26,188 +28,179 @@ const characterImages: Record<string, string> = {
   realist: "/characters/realist.png",
 };
 
-const modules = [
-  {
-    id: "budgeting",
-    title: "Budgeting Basics",
-    levels: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "saving",
-    title: "Saving & Planning",
-    levels: [6, 7, 8, 9, 10],
-  },
-];
+type LeaderboardEntry = {
+  name: string;
+  xp: number;
+  leaderboard_position: number;
+};
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // 🔧 Demo progression: currently on level 3
-  const currentLevel = 3;
-
-  // 🔒 Protect dashboard and update streak
+  // 🔒 Protect dashboard and fetch data
   useEffect(() => {
-    const storedUser = localStorage.getItem("finstinct-user");
-    if (!storedUser) {
-      router.replace("/");
-    } else {
-      // Update streak on login
-      const { streak, isNewDay } = updateStreak();
-      const userData = JSON.parse(storedUser);
-      userData.streak = streak;
-      setUser(userData);
-      setChecking(false);
-
-      // Show streak notification if it's a new day
-      if (isNewDay && streak > 1) {
-        // Optional: Could show a toast notification here
+    const fetchDashboardData = async () => {
+      const storedUser = localStorage.getItem("finstinct-user");
+      if (!storedUser) {
+        router.replace("/");
+        return;
       }
-    }
+
+      try {
+        const userData = JSON.parse(storedUser);
+        
+        // Update streak on login
+        const { streak, isNewDay } = updateStreak();
+        userData.streak = streak;
+        
+        // Try to fetch from backend if we have access token
+        let profileData: UserProfile | null = null;
+        if (userData.id && userData.accessToken) {
+          try {
+            profileData = await getProfile(userData.id, userData.accessToken);
+            // Update user data with backend data
+            userData.xp = profileData.xp;
+            userData.name = profileData.name;
+            userData.character = profileData.role;
+          } catch (err) {
+            console.warn("Failed to fetch profile from backend, using local data:", err);
+            // Continue with local data
+          }
+        }
+
+        setUser(userData);
+
+        // Fetch leaderboard
+        try {
+          const leaderboardData = await getLeaderboard();
+          setLeaderboard(leaderboardData);
+        } catch (err) {
+          console.warn("Failed to fetch leaderboard, using mock data:", err);
+          // Use mock leaderboard data as fallback
+          setLeaderboard([
+            { name: "Bhavesh", xp: 280, leaderboard_position: 1 },
+            { name: "Lasya", xp: 250, leaderboard_position: 2 },
+            { name: userData.name, xp: userData.xp || 0, leaderboard_position: 3 },
+          ]);
+        }
+
+        setChecking(false);
+        setLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load dashboard");
+        setChecking(false);
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, [router]);
 
-  if (checking || !user) return null;
+  if (checking) return null;
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate current level from XP
+  const currentLevel = calculateLevelFromXP(user.xp);
+  // XP needed for next level: currentLevel * 100 (e.g., Level 2 needs 100 XP, Level 3 needs 200 XP)
+  const xpForNextLevel = currentLevel * 100;
 
   return (
     <div className="min-h-screen pt-20">
-      {/* 🔝 TOP BAR */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
-          {/* Player Info */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800">
-              <Image
-                src={characterImages[user.character]}
-                alt={user.character}
-                width={40}
-                height={40}
-                className="object-contain"
+      <Navbar />
+
+      {/* Main Dashboard Content */}
+      {/* Optimized layout: Reduced padding, better space utilization */}
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+          {/* LEFT COLUMN: Player Character (Hero Style) */}
+          {/* Reduced column width to allow center/right sections to expand */}
+          <div className="lg:col-span-3 flex items-start justify-start">
+            <div className="w-full">
+              <PlayerInfo
+                name={user.name}
+                character={user.character}
+                characterImage={characterImages[user.character]}
               />
             </div>
-            <div>
-              <p className="text-sm font-bold">{user.name}</p>
-              <p className="text-xs text-gray-400 capitalize">
-                {user.character}
-              </p>
-            </div>
           </div>
 
-          {/* Center Tabs */}
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link
-              href="/dashboard"
-              className="px-3 py-1.5 rounded-full bg-white/10 text-white border border-white/20 shadow-sm"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="px-3 py-1.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 border border-transparent"
-            >
-              Leaderboard
-            </Link>
-          </nav>
-
-          {/* XP and Streak */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-yellow-400/90 text-black px-4 py-1.5 rounded-full font-bold shadow">
-              ⭐ {user.xp} XP
-            </div>
-            <div className="flex items-center gap-2 bg-orange-500/90 text-white px-4 py-1.5 rounded-full font-bold shadow">
-              🔥 {user.streak || 0} Day Streak
-            </div>
-          </div>
-
-          {/* Logout */}
-          <button
-            onClick={() => {
-              localStorage.removeItem("finstinct-user");
-              router.replace("/");
-            }}
-            className="text-sm text-red-400 hover:text-red-300"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* 🗺️ MAP */}
-      <div className="flex flex-col items-center gap-20 mt-10">
-        {modules.map((module) => (
-          <div key={module.id} className="flex flex-col items-center">
-            {/* Module Title */}
-            <h2 className="text-2xl font-black mb-10">
-              {module.title}
-            </h2>
-
-            {/* Levels */}
-            <div className="flex flex-col items-center">
-              <div className="relative w-[260px] flex flex-col items-stretch">
-                {module.levels.map((level, index) => {
-                  const isLast = index === module.levels.length - 1;
-                  const side = index % 2 === 0 ? "left" : "right";
-                  const nextSide = (index + 1) % 2 === 0 ? "left" : "right";
-
-                  const status =
-                    level < currentLevel
-                      ? "completed"
-                      : level === currentLevel
-                        ? "current"
-                        : "locked";
-
-                  return (
-                    <Fragment key={level}>
-                      {/* Node row */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1 flex justify-start">
-                          {side === "left" && (
-                            <MapNode
-                              label={String(level)}
-                              status={status}
-                              href={`/level/${level}`}
-                            />
-                          )}
-                        </div>
-                        <div className="flex-1 flex justify-end">
-                          {side === "right" && (
-                            <MapNode
-                              label={String(level)}
-                              status={status}
-                              href={`/level/${level}`}
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Connector to next node */}
-                      {!isLast && (
-                        <div className="h-16">
-                          <PathLine
-                            status={status}
-                            fromSide={side}
-                            toSide={nextSide}
-                          />
-                        </div>
-                      )}
-                    </Fragment>
-                  );
-                })}
-
-                {/* Boss Fight */}
-                <div className="mt-6 flex justify-center">
-                  <BossNode
-                    href={`/boss/${module.id}`}
-                    locked={
-                      !module.levels.every((lvl) => lvl < currentLevel)
-                    }
-                  />
+          {/* CENTER COLUMN: Progress & News (Expanded) */}
+          {/* Increased column span for better space utilization */}
+          <div className="lg:col-span-5 space-y-4 md:space-y-6">
+            {/* Player Progression - Compact but clear */}
+            <div className="bg-black/40 backdrop-blur border border-white/10 rounded-xl p-5 md:p-6 space-y-4">
+              <h2 className="text-lg font-bold text-gray-200">Your Progress</h2>
+              <ProgressBar
+                currentLevel={currentLevel}
+                currentXP={user.xp}
+                xpForNextLevel={xpForNextLevel}
+              />
+              <div className="pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Total XP</span>
+                  <span className="text-yellow-400 font-bold">{user.xp} XP</span>
                 </div>
+                {user.streak && user.streak > 0 && (
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-gray-400">Streak</span>
+                    <span className="text-orange-400 font-bold">
+                      🔥 {user.streak} Days
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Finance News - Expanded and more prominent */}
+            <FinanceNews />
           </div>
-        ))}
-      </div>
+
+          {/* RIGHT COLUMN: Mini Leaderboard (Expanded) */}
+          {/* Increased column span for better visibility */}
+          <div className="lg:col-span-4">
+            <MiniLeaderboard
+              entries={leaderboard}
+              currentPlayerName={user.name}
+            />
+          </div>
+        </div>
+
+        {/* Responsive adjustments for tablet */}
+        {/* Improved spacing for smaller screens */}
+        <div className="mt-4 md:mt-6 lg:hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <FinanceNews />
+            <MiniLeaderboard
+              entries={leaderboard}
+              currentPlayerName={user.name}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
