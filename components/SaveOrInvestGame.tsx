@@ -10,6 +10,7 @@ interface Question {
 
 interface SaveOrInvestGameProps {
   onXpChange: (delta: number) => void;
+  onLevelComplete?: () => void;
 }
 
 const questions: Question[] = [
@@ -54,7 +55,7 @@ const questions: Question[] = [
 const TIME_PER_QUESTION = 15; // seconds per question
 const FEEDBACK_DURATION = 2000; // milliseconds to show feedback before auto-advancing
 
-export default function SaveOrInvestGame({ onXpChange }: SaveOrInvestGameProps) {
+export default function SaveOrInvestGame({ onXpChange, onLevelComplete }: SaveOrInvestGameProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<'save' | 'invest' | 'timeout' | null>(null);
   const [score, setScore] = useState(0);
@@ -79,6 +80,10 @@ export default function SaveOrInvestGame({ onXpChange }: SaveOrInvestGameProps) 
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       setGameCompleted(true);
+      // Mark level as complete when game finishes
+      if (onLevelComplete) {
+        onLevelComplete();
+      }
     }
   }, [currentQuestionIndex]);
 

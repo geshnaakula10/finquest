@@ -1,6 +1,6 @@
 type MapNodeProps = {
   label: string;
-  status: "completed" | "current" | "locked";
+  status: "completed" | "current" | "locked" | "default";
   href?: string;
 };
 
@@ -12,6 +12,8 @@ export default function MapNode({ label, status, href }: MapNodeProps) {
       "bg-yellow-400 shadow-[0_6px_0_#ca8a04] animate-bounce",
     locked:
       "bg-gray-600 opacity-50 cursor-pointer hover:opacity-70",
+    default:
+      "bg-yellow-400 shadow-[0_6px_0_#ca8a04] hover:translate-y-1",
   };
 
   const node = (

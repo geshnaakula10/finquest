@@ -61,15 +61,6 @@ function LevelsPageContent() {
     return completedLevels.includes(level);
   };
 
-  // Check if a level is current (next to complete)
-  const isLevelCurrent = (
-    level: number,
-    completedLevels: number[],
-    currentLevel: number
-  ): boolean => {
-    return level === currentLevel && !completedLevels.includes(level);
-  };
-
   // 🔒 Protect page and update streak
   useEffect(() => {
     const storedUser = localStorage.getItem("finstinct-user");
@@ -148,13 +139,9 @@ function LevelsPageContent() {
 
               const levelDesc = getLevelDescription(level);
               const completed = isLevelCompleted(level, completedLevels);
-              const current = isLevelCurrent(level, completedLevels, currentLevel);
 
-              const status = completed
-                ? "completed"
-                : current
-                  ? "current"
-                  : "locked";
+              // All nodes are yellow by default, green when completed
+              const status = completed ? "completed" : "default";
 
               return (
                 <Fragment key={level}>

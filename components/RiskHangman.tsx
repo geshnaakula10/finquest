@@ -52,9 +52,10 @@ const GAME_DATA: Question[] = [
 
 interface RiskHangmanProps {
     onXpChange: (delta: number) => void;
+    onLevelComplete?: () => void;
 }
 
-export default function RiskHangman({ onXpChange }: RiskHangmanProps) {
+export default function RiskHangman({ onXpChange, onLevelComplete }: RiskHangmanProps) {
     // Current game state
     const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
     const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
@@ -114,11 +115,16 @@ export default function RiskHangman({ onXpChange }: RiskHangmanProps) {
                 setHasAwardedCompletion(true);
             }
 
+            // Mark level as complete when last round is finished
+            if (currentRoundIndex === GAME_DATA.length - 1 && onLevelComplete) {
+                onLevelComplete();
+            }
+
             setTimeout(() => {
                 setShowExplanation(true);
             }, 1000);
         }
-    }, [guessedLetters, gameStatus, hasAwardedCompletion, onXpChange]); // Removed isWordComplete from connection to avoid loop, it's a function
+    }, [guessedLetters, gameStatus, hasAwardedCompletion, onXpChange, currentRoundIndex, onLevelComplete]); // Removed isWordComplete from connection to avoid loop, it's a function
 
     const handleGuess = useCallback((letter: string) => {
         const normalizedLetter = letter.toLowerCase();

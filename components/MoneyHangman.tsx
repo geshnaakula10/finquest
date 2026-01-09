@@ -86,9 +86,10 @@ const getAllRounds = (): {
 
 interface MoneyHangmanProps {
   onXpChange: (delta: number) => void;
+  onLevelComplete?: () => void;
 }
 
-export default function MoneyHangman({ onXpChange }: MoneyHangmanProps) {
+export default function MoneyHangman({ onXpChange, onLevelComplete }: MoneyHangmanProps) {
   const allRounds = getAllRounds();
 
   // Current game state
@@ -152,13 +153,18 @@ export default function MoneyHangman({ onXpChange }: MoneyHangmanProps) {
         setHasAwardedCompletion(true);
       }
 
+      // Mark level as complete when last round is finished
+      if (currentRoundIndex === allRounds.length - 1 && onLevelComplete) {
+        onLevelComplete();
+      }
+
       // Show explanation automatically after word completion
       // Small delay to let success feedback display briefly
       setTimeout(() => {
         setShowExplanation(true);
       }, 1000);
     }
-  }, [guessedLetters, gameStatus, hasAwardedCompletion, onXpChange]);
+  }, [guessedLetters, gameStatus, hasAwardedCompletion, onXpChange, currentRoundIndex, allRounds.length, onLevelComplete]);
 
   /**
    * Shared guess handler - used by both on-screen buttons and keyboard input

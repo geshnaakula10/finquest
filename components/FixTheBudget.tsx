@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isLevelCompleted, markLevelCompleted } from "@/lib/levelCompletion";
 
 // Expense option interface
 interface ExpenseOption {
@@ -49,6 +50,13 @@ export default function FixTheBudget() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [gameState, setGameState] = useState<GameState>("playing");
   const [showExplanation, setShowExplanation] = useState(false);
+  const [levelCompleted, setLevelCompleted] = useState(false);
+
+  // Check if level is already completed on mount
+  useEffect(() => {
+    const completed = isLevelCompleted(2);
+    setLevelCompleted(completed);
+  }, []);
 
   // Calculate total amount based on selected options
   useEffect(() => {
@@ -81,6 +89,11 @@ export default function FixTheBudget() {
 
     if (isCorrectSelection) {
       setGameState("correct");
+      // Mark level as completed when correct answer is given
+      if (!levelCompleted) {
+        markLevelCompleted(2);
+        setLevelCompleted(true);
+      }
     } else {
       // Within budget but wrong selection
       setGameState("wrong");

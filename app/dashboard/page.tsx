@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PlayerInfo from "@/components/dashboard/PlayerInfo";
-import ProgressBar, { calculateLevelFromXP } from "@/components/dashboard/ProgressBar";
+import CircularProgress from "@/components/dashboard/CircularProgress";
+import LearningProgress from "@/components/dashboard/LearningProgress";
+import { calculateLevelFromXP } from "@/components/dashboard/ProgressBar";
 import FinanceNews from "@/components/dashboard/FinanceNews";
 import MiniLeaderboard from "@/components/dashboard/MiniLeaderboard";
 import { getProfile, getLeaderboard, type UserProfile } from "@/lib/api";
@@ -139,22 +142,32 @@ export default function Dashboard() {
           {/* LEFT COLUMN: Player Character (Hero Style) */}
           {/* Reduced column width to allow center/right sections to expand */}
           <div className="lg:col-span-3 flex items-start justify-start">
-            <div className="w-full">
+            <div className="w-full space-y-4">
               <PlayerInfo
                 name={user.name}
                 character={user.character}
                 characterImage={characterImages[user.character]}
               />
+              {/* Play to Learn Button */}
+              <Link
+                href="/levels"
+                className="block w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400 hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-500 text-black font-bold text-base md:text-lg px-4 py-3 md:py-4 rounded-lg border-2 border-yellow-600/50 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] text-center"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xl md:text-2xl">🎮</span>
+                  <span>Play to Learn</span>
+                  <span className="text-lg md:text-xl">→</span>
+                </div>
+              </Link>
             </div>
           </div>
 
-          {/* CENTER COLUMN: Progress & News (Expanded) */}
-          {/* Increased column span for better space utilization */}
+          {/* CENTER COLUMN: Progress & Learning Progress */}
           <div className="lg:col-span-5 space-y-4 md:space-y-6">
-            {/* Player Progression - Compact but clear */}
-            <div className="bg-black/40 backdrop-blur border border-white/10 rounded-xl p-5 md:p-6 space-y-4">
+            {/* Player Progression with Circular Progress */}
+            <div className="bg-black/40 backdrop-blur border border-white/10 rounded-xl p-5 md:p-6 space-y-6">
               <h2 className="text-lg font-bold text-gray-200">Your Progress</h2>
-              <ProgressBar
+              <CircularProgress
                 currentLevel={currentLevel}
                 currentXP={user.xp}
                 xpForNextLevel={xpForNextLevel}
@@ -175,17 +188,22 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Finance News - Expanded and more prominent */}
-            <FinanceNews />
-          </div>
+            {/* Learning Progress Section */}
+            <div className="bg-black/40 backdrop-blur border border-white/10 rounded-xl p-5 md:p-6">
+              <LearningProgress currentLevel={currentLevel} />
+            </div>
 
-          {/* RIGHT COLUMN: Mini Leaderboard (Expanded) */}
-          {/* Increased column span for better visibility */}
-          <div className="lg:col-span-4">
+            {/* Mini Leaderboard */}
             <MiniLeaderboard
               entries={leaderboard}
               currentPlayerName={user.name}
             />
+          </div>
+
+          {/* RIGHT COLUMN: Finance News */}
+          <div className="lg:col-span-4 space-y-4 md:space-y-6">
+            {/* Finance News - Moved to right side */}
+            <FinanceNews />
           </div>
         </div>
 
