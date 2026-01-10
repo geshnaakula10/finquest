@@ -7,28 +7,27 @@ import Navbar from "@/components/Navbar";
 import PlayerInfo from "@/components/dashboard/PlayerInfo";
 import CircularProgress from "@/components/dashboard/CircularProgress";
 import LearningProgress from "@/components/dashboard/LearningProgress";
-import { calculateLevelFromXP } from "@/components/dashboard/ProgressBar";
 import FinanceNews from "@/components/dashboard/FinanceNews";
 import MiniLeaderboard from "@/components/dashboard/MiniLeaderboard";
-import { getProfile, getLeaderboard, type UserProfile } from "@/lib/api";
-import { updateStreak } from "@/lib/streak";
+import { calculateLevelFromXP } from "@/components/dashboard/ProgressBar";
 
-type User = {
-  name: string;
-  email: string;
-  character: string;
-  xp: number;
-  streak?: number;
-  lastLoginDate?: string | null;
-  id?: string;
-  accessToken?: string;
-};
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 const characterImages: Record<string, string> = {
   explorer: "/characters/explorer.png",
   strategist: "/characters/strategist.png",
   dreamer: "/characters/dreamer.png",
   realist: "/characters/realist.png",
+};
+
+type User = {
+  user_id: string;
+  name: string;
+  email: string;
+  character: string;
+  xp: number;
+  level: number;
+  streak: number;
 };
 
 type LeaderboardEntry = {
@@ -40,72 +39,100 @@ type LeaderboardEntry = {
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔒 Protect dashboard and fetch data
   useEffect(() => {
+    let isMounted = true;
+
     const fetchDashboardData = async () => {
+      // Step 1: Check localStorage for user_id
       const storedUser = localStorage.getItem("finstinct-user");
+      
       if (!storedUser) {
         router.replace("/");
         return;
       }
 
       try {
-        const userData = JSON.parse(storedUser);
+        const parsedUser = JSON.parse(storedUser);
         
-        // Update streak on login
-        const { streak, isNewDay } = updateStreak();
-        userData.streak = streak;
-        
-        // Try to fetch from backend if we have access token
-        let profileData: UserProfile | null = null;
-        if (userData.id && userData.accessToken) {
-          try {
-            profileData = await getProfile(userData.id, userData.accessToken);
-            // Update user data with backend data
-            userData.xp = profileData.xp;
-            userData.name = profileData.name;
-            userData.character = profileData.role;
-          } catch (err) {
-            console.warn("Failed to fetch profile from backend, using local data:", err);
-            // Continue with local data
-          }
+        // Step 2: Verify user_id exists
+        if (!parsedUser.user_id) {
+          console.error("No user_id found in localStorage");
+          router.replace("/");
+          return;
         }
 
-        setUser(userData);
+        console.log("Fetching profile for user_id:", parsedUser.user_id);
 
-        // Fetch leaderboard
-        try {
-          const leaderboardData = await getLeaderboard();
-          setLeaderboard(leaderboardData);
-        } catch (err) {
-          console.warn("Failed to fetch leaderboard, using mock data:", err);
-          // Use mock leaderboard data as fallback
-          setLeaderboard([
-            { name: "Bhavesh", xp: 280, leaderboard_position: 1 },
-            { name: "Lasya", xp: 250, leaderboard_position: 2 },
-            { name: userData.name, xp: userData.xp || 0, leaderboard_position: 3 },
-          ]);
+        // Step 3: Fetch profile from Flask backend using user_id
+        const profileRes = await fetch(
+          `${API_BASE_URL}/api/profile?user_id=${parsedUser.user_id}`
+        );
+
+        if (!profileRes.ok) {
+          const errorText = await profileRes.text();
+          throw new Error(`Failed to fetch profile: ${errorText}`);
         }
 
-        setChecking(false);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load dashboard");
-        setChecking(false);
-        setLoading(false);
+        const profileData = await profileRes.json();
+        console.log("Profile data received:", profileData);
+
+        if (!isMounted) return;
+
+        // Step 4: Set user state with backend data
+        setUser({
+          user_id: profileData.id || parsedUser.user_id,
+          name: profileData.username || "Player",
+          email: profileData.email || parsedUser.email,
+          character: profileData.character || "explorer",
+          xp: profileData.xp || 0,
+          level: profileData.level || 1,
+          streak: profileData.streak || 1,
+        });
+
+        // Step 5: Fetch leaderboard
+        const leaderboardRes = await fetch(`${API_BASE_URL}/api/leaderboard`);
+
+        if (!leaderboardRes.ok) {
+          throw new Error("Failed to fetch leaderboard");
+        }
+
+        const leaderboardData = await leaderboardRes.json();
+        console.log("Leaderboard data received:", leaderboardData);
+
+        // Step 6: Format leaderboard data
+        const formattedLeaderboard: LeaderboardEntry[] = leaderboardData.map(
+          (entry: any, index: number) => ({
+            name: entry.username,
+            xp: entry.xp,
+            leaderboard_position: index + 1,
+          })
+        );
+
+        if (isMounted) {
+          setLeaderboard(formattedLeaderboard);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Dashboard error:", err);
+        if (isMounted) {
+          setError(err.message || "Failed to load dashboard");
+          setLoading(false);
+        }
       }
     };
 
     fetchDashboardData();
-  }, [router]);
 
-  if (checking) return null;
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty array - runs once on mount
 
+  // Loading state
   if (loading || !user) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center">
@@ -116,31 +143,33 @@ export default function Dashboard() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-400">{error}</p>
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => router.replace("/")}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Return to Home
+          </button>
         </div>
       </div>
     );
   }
 
-  // Calculate current level from XP
   const currentLevel = calculateLevelFromXP(user.xp);
-  // XP needed for next level: currentLevel * 100 (e.g., Level 2 needs 100 XP, Level 3 needs 200 XP)
   const xpForNextLevel = currentLevel * 100;
 
   return (
     <div className="min-h-screen pt-20">
       <Navbar />
 
-      {/* Main Dashboard Content */}
-      {/* Optimized layout: Reduced padding, better space utilization */}
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-          {/* LEFT COLUMN: Player Character (Hero Style) */}
-          {/* Reduced column width to allow center/right sections to expand */}
+          {/* LEFT COLUMN: Player Character */}
           <div className="lg:col-span-3 flex items-start justify-start">
             <div className="w-full space-y-4">
               <PlayerInfo
@@ -202,13 +231,11 @@ export default function Dashboard() {
 
           {/* RIGHT COLUMN: Finance News */}
           <div className="lg:col-span-4 space-y-4 md:space-y-6">
-            {/* Finance News - Moved to right side */}
             <FinanceNews />
           </div>
         </div>
 
         {/* Responsive adjustments for tablet */}
-        {/* Improved spacing for smaller screens */}
         <div className="mt-4 md:mt-6 lg:hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <FinanceNews />

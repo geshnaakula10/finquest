@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
+import { signup } from "@/lib/api";
+
 const characters = [
   { id: "explorer", label: "Explorer", image: "/characters/explorer.png" },
   { id: "strategist", label: "Strategist", image: "/characters/strategist.png" },
@@ -31,28 +33,31 @@ export default function Home() {
     } else {
       setChecking(false);
     }
-  }, [router]);
+  }, []); // ✅ Fixed: Empty dependency array
 
   if (checking) return null; // prevent flicker
 
   const canStart = Boolean(name && email && password && character);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!canStart || loading) return;
 
     setLoading(true);
     setError(null);
 
     try {
+      const streak = 1;
+      const { user_id } = await signup(email, password, name, character!, streak);
+      
       // Store user data in localStorage
       const user = {
+        user_id,
         name,
         email,
-        password, // Note: In production, never store passwords in localStorage
         character: character!,
         xp: 0,
-        streak: 0,
-        lastLoginDate: null,
+        streak: 1,
+        lastLoginDate: new Date().toISOString(),
       };
 
       localStorage.setItem("finstinct-user", JSON.stringify(user));

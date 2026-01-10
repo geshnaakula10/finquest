@@ -1,35 +1,30 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000"; // Flask backend URL
 
 export type UserProfile = {
-  id: string;
-  name: string;
-  role: string; // character
+  email: string;
+  username: string;
+  character: string;
   xp: number;
-  leaderboard_position?: number;
+  level: number;
+  streak: number;
 };
 
 export type AuthResponse = {
-  user: {
-    id: string;
-    email: string;
-  };
-  session: {
-    access_token: string;
-    refresh_token: string;
-  };
+  user_id: string;
 };
 
-// Sign up a new user
+// ---------------- Signup ----------------
 export async function signup(
   email: string,
-  password: string
+  password: string,
+  username: string,
+  character: string,
+  streak: number,
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/signup`, {
+  const response = await fetch(`${API_BASE_URL}/api/signup`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, username, character, streak }),
   });
 
   if (!response.ok) {
@@ -38,30 +33,17 @@ export async function signup(
   }
 
   const data = await response.json();
-  
-  // If signup response includes session, return it directly
-  if (data.session) {
-    return {
-      user: data.user,
-      session: data.session,
-    };
-  }
-  
-  // Otherwise, login to get session (for email confirmation flows)
-  const loginResponse = await login(email, password);
-  return loginResponse;
+  return { user_id: data.user_id };
 }
 
-// Login user
+// ---------------- Login ----------------
 export async function login(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
 
@@ -70,44 +52,15 @@ export async function login(
     throw new Error(error || "Login failed");
   }
 
-  return await response.json();
-}
-
-// Create user profile
-export async function createProfile(
-  user_id: string,
-  name: string,
-  role: string,
-  accessToken: string
-): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/profile`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ user_id, name, role }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to create profile");
-  }
-
   const data = await response.json();
-  return Array.isArray(data) ? data[0] : data;
+  return { user_id: data.user_id };
 }
 
-// Get user profile
-export async function getProfile(
-  user_id: string,
-  accessToken: string
-): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/profile/${user_id}`, {
+// ---------------- Get Profile ----------------
+export async function getProfile(): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profile`, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
@@ -118,19 +71,11 @@ export async function getProfile(
   return await response.json();
 }
 
-// Add XP to user profile
-export async function addXP(
-  user_id: string,
-  xp: number,
-  accessToken: string
-): Promise<{ xp: number }> {
-  const response = await fetch(`${API_BASE_URL}/profile/xp`, {
+// ---------------- Add XP ----------------
+export async function addXP(xp: number): Promise<{ xp: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/addxp/${xp}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ user_id, xp }),
+    headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
@@ -141,11 +86,26 @@ export async function addXP(
   return await response.json();
 }
 
-// Get leaderboard
+// ---------------- Change Level ----------------
+export async function changeLevel(): Promise<{ level: number }> {
+  const response = await fetch(`${API_BASE_URL}/api/changeLevel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "Failed to change level");
+  }
+
+  return await response.json();
+}
+
+// ---------------- Leaderboard ----------------
 export async function getLeaderboard(): Promise<
-  Array<{ name: string; xp: number; leaderboard_position: number }>
+  Array<{ username: string; xp: number; level: number }>
 > {
-  const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+  const response = await fetch(`${API_BASE_URL}/api/leaderboard`, {
     method: "GET",
   });
 
@@ -156,4 +116,3 @@ export async function getLeaderboard(): Promise<
 
   return await response.json();
 }
-
