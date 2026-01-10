@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/lib/api"; // Import the login function from your api.ts
+import { login, getProfile } from "@/lib/api"; // Import the login function from your api.ts
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,8 +16,8 @@ export default function LoginPage() {
 
   // 🔒 Auto-redirect if already logged in
   useEffect(() => {
-    const storedUserId = localStorage.getItem("finstinct-user-id");
-    if (storedUserId) {
+    const storedUser = localStorage.getItem("finstinct-user");
+    if (storedUser) {
       router.replace("/dashboard");
     } else {
       setChecking(false);
@@ -38,11 +38,31 @@ export default function LoginPage() {
       // Call the backend login API
       const response = await login(email, password);
       
-      // Store user_id in localStorage
-      localStorage.setItem("finstinct-user-id", response.user_id);
+      // Try to fetch the full user profile, but handle case where profile doesn't exist
+      let profile;
+      try {
+        profile = await getProfile(response.user_id);
+      } catch (profileErr) {
+        // If profile doesn't exist, create a default user object
+        console.warn("Profile not found, using defaults:", profileErr);
+        profile = null;
+      }
+      
+      // Store user data in localStorage in the same format as signup
+      const user = {
+        user_id: response.user_id,
+        name: profile?.username || "Player",
+        email: profile?.email || email,
+        character: profile?.character || "explorer",
+        xp: profile?.xp || 0,
+        streak: profile?.streak || 1,
+        lastLoginDate: new Date().toISOString(),
+      };
+
+      localStorage.setItem("finstinct-user", JSON.stringify(user));
 
       // Login successful - redirect to dashboard
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to login"

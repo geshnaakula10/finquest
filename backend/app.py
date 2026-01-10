@@ -88,8 +88,29 @@ def profile():
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
     try:
-        profile = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
-        return jsonify(profile.data), 200
+        # Try to get the profile
+        profile_resp = supabase.table("profiles").select("*").eq("id", user_id).execute()
+        
+        # If profile doesn't exist, create a default one
+        if not profile_resp.data or len(profile_resp.data) == 0:
+            # Create default profile
+            default_profile = {
+                "id": user_id,
+                "email": "",
+                "username": "Player",
+                "character": "explorer",
+                "xp": 0,
+                "level": 1,
+                "streak": 1,
+            }
+            
+            # Insert the default profile
+            supabase.table("profiles").insert(default_profile).execute()
+            
+            return jsonify(default_profile), 200
+        
+        # Profile exists, return it
+        return jsonify(profile_resp.data[0]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -121,26 +142,37 @@ def add_xp():
         current_xp = resp.data[0]["xp"] if resp.data[0]["xp"] is not None else 0
         new_xp = max(0, current_xp + xp_delta)
         
-        print(f"[ADD XP] Updating: {current_xp} + {xp_delta} = {new_xp}")
+        # Calculate new level based on XP (Level 1: 0-99, Level 2: 100-199, etc.)
+        new_level = (new_xp // 100) + 1
+        
+        print(f"[ADD XP] Updating: {current_xp} + {xp_delta} = {new_xp}, Level: {new_level}")
 
-        # Update XP in database with SERVICE_ROLE_KEY (bypasses RLS)
+        # Update XP and level in database with SERVICE_ROLE_KEY (bypasses RLS)
         update_resp = supabase.table("profiles").update({
-            "xp": new_xp
+            "xp": new_xp,
+            "level": new_level
         }).eq("id", user_id).execute()
         
         print(f"[ADD XP] Update response data: {update_resp.data}")
         print(f"[ADD XP] Update response count: {update_resp.count if hasattr(update_resp, 'count') else 'N/A'}")
         
         # Verify the update worked
-        verify_resp = supabase.table("profiles").select("xp").eq("id", user_id).execute()
-        actual_xp = verify_resp.data[0]["xp"] if verify_resp.data and len(verify_resp.data) > 0 else None
-        print(f"[ADD XP] Verified XP in database: {actual_xp}")
-        
-        if actual_xp != new_xp:
-            print(f"[ADD XP] WARNING: XP mismatch! Expected {new_xp}, got {actual_xp}")
-            return jsonify({"error": "Failed to update XP - RLS policy may be blocking update"}), 500
+        verify_resp = supabase.table("profiles").select("xp, level").eq("id", user_id).execute()
+        if verify_resp.data and len(verify_resp.data) > 0:
+            actual_xp = verify_resp.data[0]["xp"]
+            actual_level = verify_resp.data[0]["level"]
+            print(f"[ADD XP] Verified in database: XP={actual_xp}, Level={actual_level}")
+            
+            if actual_xp != new_xp:
+                print(f"[ADD XP] WARNING: XP mismatch! Expected {new_xp}, got {actual_xp}")
+                return jsonify({"error": "Failed to update XP - RLS policy may be blocking update"}), 500
+            
+            if actual_level != new_level:
+                print(f"[ADD XP] WARNING: Level mismatch! Expected {new_level}, got {actual_level}")
+        else:
+            print(f"[ADD XP] WARNING: Could not verify update")
 
-        return jsonify({"xp": new_xp}), 200
+        return jsonify({"xp": new_xp, "level": new_level}), 200
 
     except Exception as e:
         print(f"[ADD XP] Error: {str(e)}")

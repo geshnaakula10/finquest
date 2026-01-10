@@ -44,9 +44,15 @@ export function isLevelCompleted(levelId: number): boolean {
  * This function ensures only ONE request is sent per level completion
  */
 export async function markLevelCompleted(levelId: number): Promise<void> {
-  const storedUserId = localStorage.getItem("finstinct-user-id");
-  if (!storedUserId) {
+  const storedUser = localStorage.getItem("finstinct-user");
+  if (!storedUser) {
     throw new Error("User not logged in");
+  }
+  
+  const user = JSON.parse(storedUser);
+  const storedUserId = user.user_id;
+  if (!storedUserId) {
+    throw new Error("User ID not found");
   }
 
   // Check if already processing this level

@@ -23,26 +23,25 @@ export default function Level1() {
       return;
     }
 
-    setXp(prev => {
-      const newXp = Math.max(0, prev + delta);
+    // Update game display XP (starts at 0, accumulates during session)
+    setXp(prev => Math.max(0, prev + delta));
 
-      // Update XP in localStorage
-      const storedUser = localStorage.getItem('finstinct-user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        user.xp = newXp;
-        localStorage.setItem('finstinct-user', JSON.stringify(user));
+    // Update total XP in localStorage
+    const storedUser = localStorage.getItem('finstinct-user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      const currentTotalXp = user.xp || 0;
+      const newTotalXp = Math.max(0, currentTotalXp + delta);
+      user.xp = newTotalXp;
+      localStorage.setItem('finstinct-user', JSON.stringify(user));
 
-        // Sync to backend (fire and forget - don't block UI)
-        import('@/lib/api').then(({ addXP }) => {
-          addXP(user.user_id, delta).catch(err => {
-            console.error('Failed to sync XP to backend:', err);
-          });
+      // Sync to backend (fire and forget - don't block UI)
+      import('@/lib/api').then(({ addXP }) => {
+        addXP(user.user_id, delta).catch(err => {
+          console.error('Failed to sync XP to backend:', err);
         });
-      }
-
-      return newXp;
-    });
+      });
+    }
   }, [levelCompleted]);
 
   // Mark level as completed when all rounds are finished
@@ -54,14 +53,8 @@ export default function Level1() {
     }
   }, [levelCompleted]);
 
-  // Load initial XP from localStorage
-  useEffect(() => {
-    const storedUser = localStorage.getItem('finstinct-user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setXp(user.xp || 0);
-    }
-  }, []);
+  // Game display XP starts at 0 for this session
+  // Total XP is tracked in localStorage and backend
 
   // Render the game immediately (no intro slides)
   return (
