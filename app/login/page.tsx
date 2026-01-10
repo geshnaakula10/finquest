@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { login } from "@/lib/api"; // Import the login function from your api.ts
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,8 +16,8 @@ export default function LoginPage() {
 
   // 🔒 Auto-redirect if already logged in
   useEffect(() => {
-    const storedUser = localStorage.getItem("finstinct-user");
-    if (storedUser) {
+    const storedUserId = localStorage.getItem("finstinct-user-id");
+    if (storedUserId) {
       router.replace("/dashboard");
     } else {
       setChecking(false);
@@ -27,29 +28,18 @@ export default function LoginPage() {
 
   const canLogin = Boolean(email && password);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!canLogin || loading) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Check if user exists in localStorage
-      const storedUser = localStorage.getItem("finstinct-user");
-      if (!storedUser) {
-        setError("No account found. Please sign up first.");
-        setLoading(false);
-        return;
-      }
-
-      const user = JSON.parse(storedUser);
+      // Call the backend login API
+      const response = await login(email, password);
       
-      // Verify email and password match
-      if (user.email !== email || user.password !== password) {
-        setError("Invalid email or password.");
-        setLoading(false);
-        return;
-      }
+      // Store user_id in localStorage
+      localStorage.setItem("finstinct-user-id", response.user_id);
 
       // Login successful - redirect to dashboard
       router.push("/dashboard");
@@ -144,4 +134,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
