@@ -93,7 +93,7 @@ function LevelsPageContent() {
         <Navbar />
 
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-3xl font-black mb-8 text-center">Map</h1>
+          <h1 className="text-3xl font-black mb-8 text-center">Modules</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {modules.map((module) => (
               <Link

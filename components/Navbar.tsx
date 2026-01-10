@@ -74,51 +74,46 @@ export default function Navbar() {
         <nav className="flex items-center gap-2 md:gap-3 text-sm font-medium flex-nowrap flex-1 justify-center min-w-0">
           <Link
             href="/dashboard"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${
-              isActive("/dashboard")
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${isActive("/dashboard")
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-transparent"
-            }`}
+              }`}
           >
             Dashboard
           </Link>
           <Link
             href="/levels"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${
-              isActive("/levels")
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${isActive("/levels")
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-transparent"
-            }`}
+              }`}
           >
-            Map
+            Modules
           </Link>
           <Link
             href="/leaderboard"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${
-              isActive("/leaderboard")
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${isActive("/leaderboard")
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-transparent"
-            }`}
+              }`}
           >
             Leaderboard
           </Link>
           <Link
             href="/stock-market"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${
-              isActive("/stock-market")
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${isActive("/stock-market")
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-transparent"
-            }`}
+              }`}
           >
             Stock Market
           </Link>
           <Link
             href="/finance-news"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${
-              isActive("/finance-news")
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap flex-shrink-0 ${isActive("/finance-news")
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-transparent"
-            }`}
+              }`}
           >
             Finance News
           </Link>
@@ -138,11 +133,10 @@ export default function Navbar() {
         <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
           <Link
             href="/feedback"
-            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap text-sm font-medium ${
-              pathname === "/feedback"
+            className={`px-4 md:px-5 py-1.5 rounded-full border transition whitespace-nowrap text-sm font-medium ${pathname === "/feedback"
                 ? "bg-white/10 text-white border-white/20 shadow-sm"
                 : "text-gray-300 hover:text-white hover:bg-white/10 border-white/10"
-            }`}
+              }`}
           >
             <span className="flex items-center gap-2">
               <span>💬</span>
