@@ -10,6 +10,7 @@ import Level4Game from "@/components/Level4";
 import FixTheBudget from "@/components/FixTheBudget";
 import { level1FlashCards } from "./data/level1";
 import { level2Slides } from "./data/level2";
+import { markLevelCompleted } from "@/lib/levelCompletion";
 
 export default function LevelPage({
   params,
@@ -20,6 +21,24 @@ export default function LevelPage({
   const currentLevel = parseInt(params.id);
   const nextLevel = currentLevel + 1;
   const levelId = params.id;
+  const [completing, setCompleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle level completion and XP award
+  const handleCompleteLevel = async () => {
+    setCompleting(true);
+    setError(null);
+    
+    try {
+      await markLevelCompleted(currentLevel);
+      // Navigate to next level after successful completion
+      router.push(`/level/${nextLevel}`);
+    } catch (err) {
+      setError("Failed to complete level. Please try again.");
+      console.error(err);
+      setCompleting(false);
+    }
+  };
 
   // Determine which game to show based on level
   const getGameComponent = () => {
@@ -54,13 +73,20 @@ export default function LevelPage({
             {getGameComponent()}
           </section>
 
+          {error && (
+            <div className="text-center">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
           <section className="flex justify-center pt-4">
-            <Link
-              href={`/level/${nextLevel}`}
-              className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl"
+            <button
+              onClick={handleCompleteLevel}
+              disabled={completing}
+              className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next Level →
-            </Link>
+              {completing ? "Completing..." : "Complete & Continue →"}
+            </button>
           </section>
         </div>
       </main>
@@ -86,13 +112,20 @@ export default function LevelPage({
             {getGameComponent()}
           </section>
 
+          {error && (
+            <div className="text-center">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
           <section className="flex justify-center pt-4">
-            <Link
-              href={`/level/${nextLevel}`}
-              className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl"
+            <button
+              onClick={handleCompleteLevel}
+              disabled={completing}
+              className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next Level →
-            </Link>
+              {completing ? "Completing..." : "Complete & Continue →"}
+            </button>
           </section>
         </div>
       </main>
@@ -209,13 +242,20 @@ export default function LevelPage({
               {getGameComponent()}
             </section>
 
+            {error && (
+              <div className="text-center">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
             <section className="flex justify-center pt-4">
-              <Link
-                href={`/level/${nextLevel}`}
-                className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl"
+              <button
+                onClick={handleCompleteLevel}
+                disabled={completing}
+                className="rounded-full bg-emerald-500 px-6 py-3 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next Level →
-              </Link>
+                {completing ? "Completing..." : "Complete & Continue →"}
+              </button>
             </section>
           </>
         )}

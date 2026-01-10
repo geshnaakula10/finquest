@@ -28,8 +28,8 @@ export async function signup(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Signup failed");
+    const error = await response.json();
+    throw new Error(error.error || "Signup failed");
   }
 
   const data = await response.json();
@@ -48,8 +48,8 @@ export async function login(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Login failed");
+    const error = await response.json();
+    throw new Error(error.error || "Login failed");
   }
 
   const data = await response.json();
@@ -57,15 +57,15 @@ export async function login(
 }
 
 // ---------------- Get Profile ----------------
-export async function getProfile(): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+export async function getProfile(userId: string): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/api/profile?user_id=${userId}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to fetch profile");
+    const error = await response.json();
+    throw new Error(error.error || "Failed to fetch profile");
   }
 
   return await response.json();
@@ -73,6 +73,8 @@ export async function getProfile(): Promise<UserProfile> {
 
 // ---------------- Add XP ----------------
 export async function addXP(userId: string, xp: number): Promise<{ xp: number }> {
+  console.log("Calling addXP API:", { userId, xp });
+
   const response = await fetch(`${API_BASE_URL}/api/addxp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -80,11 +82,14 @@ export async function addXP(userId: string, xp: number): Promise<{ xp: number }>
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to add XP");
+    const errorText = await response.text();
+    console.error("AddXP API error:", errorText);
+    throw new Error(errorText || "Failed to add XP");
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log("AddXP API response:", result);
+  return result;
 }
 
 // ---------------- Change Level ----------------
@@ -95,8 +100,8 @@ export async function changeLevel(): Promise<{ level: number }> {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to change level");
+    const error = await response.json();
+    throw new Error(error.error || "Failed to change level");
   }
 
   return await response.json();
@@ -104,15 +109,15 @@ export async function changeLevel(): Promise<{ level: number }> {
 
 // ---------------- Leaderboard ----------------
 export async function getLeaderboard(): Promise<
-  Array<{ username: string; xp: number; level: number }>
+  Array<{ position: number; username: string; xp: number; level: number }>
 > {
   const response = await fetch(`${API_BASE_URL}/api/leaderboard`, {
     method: "GET",
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to fetch leaderboard");
+    const error = await response.json();
+    throw new Error(error.error || "Failed to fetch leaderboard");
   }
 
   return await response.json();
